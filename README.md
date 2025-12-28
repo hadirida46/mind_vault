@@ -1,16 +1,22 @@
-# mind_vault
+# Mind Vault 🧠📚
 
-A new Flutter project.
+Mind Vault is a personal study organization app built with Flutter and a PHP backend.  
+It helps a single user organize courses, notes, tasks, and terminologies efficiently.
 
-## Getting Started
+## Features ✨
 
-This project is a starting point for a Flutter application.
+- **Courses 📂:** Create and manage multiple courses.
+- **Notes 📝:** Save notes with optional images inside each course.
+- **Tasks ✅:** Add tasks with descriptions and deadlines.
+- **Terminologies 🔤:** Store terms and their meanings for quick reference.
+- **Single User 👤:** Designed for personal study management.
 
-A few resources to get you started if this is your first Flutter project:
+## Technology Stack 💻
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Frontend:** Flutter
+- **Backend:** Pure PHP
+- **Hosting:** AwardSpace online service
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## License 🛡️
+
+This project is for personal use and learning purposes.
