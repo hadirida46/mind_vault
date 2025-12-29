@@ -34,11 +34,15 @@ class _TerminologyPageState extends State<TerminologyPage> {
         _terms = data.map<Term>((e) => Term.fromJson(e)).toList();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load terminologies')),
+        const SnackBar(
+          content: Text('Failed to load terminologies'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -48,52 +52,78 @@ class _TerminologyPageState extends State<TerminologyPage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Term'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: termController,
-              decoration: const InputDecoration(labelText: 'Term'),
-            ),
-            TextField(
-              controller: definitionController,
-              decoration: const InputDecoration(labelText: 'Definition'),
-              maxLines: 3,
-            ),
-          ],
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'New Terminology',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: termController,
+                decoration: InputDecoration(
+                  labelText: 'Term',
+                  prefixIcon: const Icon(Icons.label_important_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: definitionController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Definition',
+                  alignLabelWithHint: true,
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.only(bottom: 40),
+                    child: Icon(Icons.description_outlined),
+                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFA726),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () async {
+                      final term = termController.text.trim();
+                      final definition = definitionController.text.trim();
+                      if (term.isEmpty || definition.isEmpty) return;
+                      Navigator.pop(context);
+                      try {
+                        await ApiService.createTerminology(widget.courseId, term, definition);
+                        _loadTerms();
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Failed to create term')),
+                        );
+                      }
+                    },
+                    child: const Text('Save Term'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final term = termController.text.trim();
-              final definition = definitionController.text.trim();
-
-              if (term.isEmpty || definition.isEmpty) return;
-
-              Navigator.pop(context);
-
-              try {
-                await ApiService.createTerminology(
-                  widget.courseId,
-                  term,
-                  definition,
-                );
-                _loadTerms();
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to create term')),
-                );
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
       ),
     );
   }
@@ -101,27 +131,97 @@ class _TerminologyPageState extends State<TerminologyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.courseTitle)),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _terms.isEmpty
-          ? const Center(child: Text('No terms yet'))
-          : ListView.builder(
-        itemCount: _terms.length,
-        itemBuilder: (context, index) {
-          final term = _terms[index];
-          return Card(
-            margin: const EdgeInsets.all(8),
-            child: ListTile(
-              title: Text(term.term),
-              subtitle: Text(term.definition),
-            ),
-          );
-        },
+      backgroundColor: const Color(0xFFFBFBFB),
+      appBar: AppBar(
+        elevation: 0,
+        title: Text(widget.courseTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFFFFA726),
       ),
-      floatingActionButton: FloatingActionButton(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFA726)))
+          : RefreshIndicator(
+        onRefresh: _loadTerms,
+        color: const Color(0xFFFFA726),
+        child: _terms.isEmpty
+            ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.style_outlined, size: 80, color: Colors.grey[300]),
+              const SizedBox(height: 16),
+              const Text('No terms added yet', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        )
+            : ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: _terms.length,
+          itemBuilder: (context, index) {
+            final term = _terms[index];
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ExpansionTile(
+                shape: const RoundedRectangleBorder(side: BorderSide.none),
+                tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFA726).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.menu_book, color: Color(0xFFFFA726)),
+                ),
+                title: Text(
+                  term.term,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF424242),
+                  ),
+                ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Text(
+                        term.definition,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[800],
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFFFA726),
+        label: const Text('Add Term', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        icon: const Icon(Icons.add, color: Colors.white),
         onPressed: _showAddTermDialog,
-        child: const Icon(Icons.add),
       ),
     );
   }
